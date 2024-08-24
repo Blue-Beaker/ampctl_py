@@ -1,3 +1,4 @@
+#! /bin/python3
 import asyncio
 import os,sys,bleak,argparse
 
