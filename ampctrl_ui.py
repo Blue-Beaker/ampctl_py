@@ -57,11 +57,11 @@ class App(QtWidgets.QMainWindow):
     scannedDevices:dict={}
     connected=False
 
-    scanner:bleak.BleakScanner
-    client:bleak.BleakClient
-    stop_scan_event:asyncio.Event
+    scanner:bleak.BleakScanner=None
+    client:bleak.BleakClient=None
+    stop_scan_event:asyncio.Event=None
     
-    loop:asyncio.AbstractEventLoop
+    loop:asyncio.AbstractEventLoop=None
 
     def __init__(self):
         super(App, self).__init__()
@@ -72,7 +72,7 @@ class App(QtWidgets.QMainWindow):
         self.selectDevice.setCurrentText(self.device)
         self.centralWidget().setLayout(self.verticalLayout)
         self.buttonLink.clicked.connect(self.connectOrDisconnect)
-        self.sliderVolume.valueChanged.connect(self.setVolume)
+        self.sliderVolume.sliderReleased.connect(self.setVolume)
         self.show()
         self.setControlsEnabled(False)
         self.startScan()
@@ -121,16 +121,22 @@ class App(QtWidgets.QMainWindow):
             self.stop_scan_event.set()
             self.connected=True
             self.setControlsEnabled(True)
-        self.buttonLink.icon().fromTheme("network-disconnect")
+            self.buttonLink.icon=QIcon.fromTheme("network-disconnect")
         pass
-    async def disconnect(self):
+    async def disconnect(self,scan=True):
+        if not self.client:
+            return
         await self.client.disconnect()
+        print("Disconnected")
         self.setControlsEnabled(False)
         self.connected=False
-        self.startScan()
+        if scan:
+            self.startScan()
 
-    def setVolume(self,value):
+    def setVolume(self):
+        value=self.sliderVolume.value()
         self.loop.run_until_complete(setVolume(self.client,value))
+        print("Set volume to "+str(value))
         # asyncio.run(setVolume(self.client,value))
 
 app = QtWidgets.QApplication(sys.argv)
@@ -143,4 +149,4 @@ try:
     app.exec()
 finally:
     window.stop_scan_event.set()
-    asyncio.run(window.disconnect())
+    window.loop.run_until_complete(window.disconnect(False))
