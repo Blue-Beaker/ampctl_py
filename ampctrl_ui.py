@@ -29,17 +29,26 @@ def writeConfig():
 async def setVolume(client:bleak.BleakClient,volume:int):
     if ((volume < 32) and (volume >= 0)):
         data = [0x7e, 0x0f, 0x1d, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xba]
-        sum = 0
-
         data[3] = volume
+        await sendData(client,data)
 
+async def sendData(client,data):
+        sum = 0
         for i in range(data.__len__()):
             sum += data[i]
-
         data[data.__len__()-1] = (sum+0x46)%256
         bytedata=bytearray(data)
         # print(bytedata.hex())
         await client.write_gatt_char(CHAR_WRITE,bytedata,response=True)
+
+async def setMode(client,mode):
+    if mode=="Aux":
+        await client.write_gatt_char(CHAR_WRITE,bytearray([0x7e ,0x05 ,0x16 ,0x00 ,0x99]),response=True)
+    elif mode=="Bluetooth":
+        await client.write_gatt_char(CHAR_WRITE,bytearray([0x7e ,0x05 ,0x14, 0x00, 0x97]),response=True)
+
+def callback(sender, data: bytearray):
+    print(f"{sender}: {data.hex()}")
 
 class App(QtWidgets.QMainWindow):
     buttonLink:QToolButton
@@ -73,10 +82,12 @@ class App(QtWidgets.QMainWindow):
         self.centralWidget().setLayout(self.verticalLayout)
         self.buttonLink.clicked.connect(self.connectOrDisconnect)
         self.sliderVolume.sliderReleased.connect(self.setVolume)
+        self.selectMode.currentTextChanged.connect(self.setMode)
         self.show()
         self.setControlsEnabled(False)
         self.startScan()
     def setControlsEnabled(self,enabled):
+        self.selectMode.setEnabled(enabled)
         self.buttonPrev.setEnabled(enabled)
         self.buttonNext.setEnabled(enabled)
         self.buttonPause.setEnabled(enabled)
@@ -122,6 +133,7 @@ class App(QtWidgets.QMainWindow):
             self.connected=True
             self.setControlsEnabled(True)
             self.buttonLink.icon=QIcon.fromTheme("network-disconnect")
+            await self.client.start_notify(CHAR_NOTIFY,callback)
         pass
     async def disconnect(self,scan=True):
         if not self.client:
@@ -137,7 +149,9 @@ class App(QtWidgets.QMainWindow):
         value=self.sliderVolume.value()
         self.loop.run_until_complete(setVolume(self.client,value))
         print("Set volume to "+str(value))
-        # asyncio.run(setVolume(self.client,value))
+    def setMode(self,value):
+        self.loop.run_until_complete(setMode(self.client,value))
+        print("Set value:"+value)
 
 app = QtWidgets.QApplication(sys.argv)
 window=App()

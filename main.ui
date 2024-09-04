@@ -52,7 +52,18 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
-        <widget class="QComboBox" name="selectMode"/>
+        <widget class="QComboBox" name="selectMode">
+         <item>
+          <property name="text">
+           <string>Aux</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Bluetooth</string>
+          </property>
+         </item>
+        </widget>
        </item>
        <item>
         <widget class="QToolButton" name="buttonPrev">
